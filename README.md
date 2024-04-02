@@ -17,9 +17,9 @@ Use cases for end to end implementations of detection-as-code (DAC)
 
 ## Use cases
 
-| use case | governance model | notes | 
-|----------|------------------|-------|
-| [infosec](https://github.com/elastic/DAC-use-cases/tree/use-case-infosec)  | GM1 |       |
-| [fork DR](https://github.com/elastic/DAC-use-cases/tree/use-case-fork-dr)  | GM1 |       |
-| [import DR](https://github.com/elastic/DAC-use-cases/tree/use-case-import-dr) | GM3 |       |
-| [platform centric MSSP](https://github.com/elastic/DAC-use-cases/tree/use-case-gm2-mssp) | GM2 |       |
+| use case | governance model | CC1 | CC2 | CC3 | CC4 | notes | 
+|----------|------------------|-----|-----|-----|-----|-------|
+| [infosec](https://github.com/elastic/DAC-use-cases/tree/use-case-infosec)  | GM1 ||||||
+| [fork DR](https://github.com/elastic/DAC-use-cases/tree/use-case-fork-dr)  | GM1 |||||||
+| [import DR](https://github.com/elastic/DAC-use-cases/tree/use-case-import-dr) | GM3 |||||||
+| [platform centric MSSP](https://github.com/elastic/DAC-use-cases/tree/use-case-gm2-mssp) | GM2 |||||||
