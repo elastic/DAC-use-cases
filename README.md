@@ -19,7 +19,7 @@ Use cases for end to end implementations of detection-as-code (DAC)
 
 | use case | governance model | CC1 | CC2 | CC3 | CC4 | notes | 
 |----------|------------------|-----|-----|-----|-----|-------|
-| [infosec](https://github.com/elastic/DAC-use-cases/tree/use-case-infosec)  | GM1 ||||||
+| [infosec](https://github.com/elastic/DAC-use-cases/tree/use-case-infosec)  | GM1 | <ul><li>no DR repo usage</li><li>use of custom rules</li><li>create detection rules in kibana and export</li><li>versioning?</li><li>custom exceptions and actions management</li><li>custom unit tests</li><li>maybe rule schema validation</li><li>no detection logic validation?</li></ul> | <ul><li>deploy via CI/CD and custom REST calls</li></ul> | <ul><li>manual management and tines</li></ul> | <ul><li>tines to push based on X trigger? (or schedule?)</li></ul> | need to verify; grimoire |
 | [fork DR](https://github.com/elastic/DAC-use-cases/tree/use-case-fork-dr)  | GM1 |||||||
 | [import DR](https://github.com/elastic/DAC-use-cases/tree/use-case-import-dr) | GM3 |||||||
 | [platform centric MSSP](https://github.com/elastic/DAC-use-cases/tree/use-case-gm2-mssp) | GM2 |||||||
