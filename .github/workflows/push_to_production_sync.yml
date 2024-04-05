@@ -1,0 +1,59 @@
+name: Push to Production Sync
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'version.lock.json'
+  workflow_dispatch:
+
+jobs:
+  sync-to-production:
+    runs-on: ubuntu-latest
+    env:
+      CUSTOM_RULES_DIR: ${{ secrets.CUSTOM_RULES_DIR }}
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.12'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip cache purge
+        pip install .[dev]
+        pip install lib/kql lib/kibana
+
+    - name: Export Rules from Kibana
+      run: python -m detection_rules kibana export-rules
+      env:
+        KIBANA_URL: ${{ env.ELASTIC_KIBANA_URL }}
+        KIBANA_USERNAME: ${{ env.ELASTIC_USERNAME }}
+        KIBANA_PASSWORD: ${{ env.ELASTIC_PASSWORD }}
+
+    - name: Import Rules to Local Repo
+      run: python -m detection_rules import-rules-to-repo --directory ${{ env.CUSTOM_RULES_DIR }}
+
+    - name: Verify Version Lock Consistency
+      run: |
+        if git diff --exit-code version.lock.json; then
+          echo "Version lock is consistent. Proceeding with the synchronization."
+        else
+          echo "Version lock inconsistency detected. Aborting the synchronization. Please kick off the manual sync workflow, review, and resolve."
+          exit 1
+
+    - name: Export Rules from Repo to NDJSON
+      run: python -m detection_rules export-rules-from-repo --outfile ${{ env.CUSTOM_RULES_DIR }}/rules_export.ndjson
+
+    - name: Import Rules to Kibana from NDJSON
+      run: python -m detection_rules kibana import-rules ${{ env.CUSTOM_RULES_DIR }}/rules_export.ndjson --overwrite --overwrite-exceptions --overwrite-action-connectors
+      env:
+        KIBANA_URL: ${{ env.ELASTIC_KIBANA_URL }}
+        KIBANA_USERNAME: ${{ env.ELASTIC_USERNAME }}
+        KIBANA_PASSWORD: ${{ env.ELASTIC_PASSWORD }}
