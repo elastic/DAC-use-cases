@@ -1,0 +1,82 @@
+name: Scheduled Sync Workflow
+
+on:
+  schedule:
+    # Schedule to run at a specific time, e.g., at 01:00 every day
+    - cron:  '0 1 * * *'
+
+jobs:
+  scheduled-sync:
+    runs-on: ubuntu-latest
+    env:
+      CUSTOM_RULES_DIR: ${{ secrets.CUSTOM_RULES_DIR }}
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.12'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip cache purge
+        pip install .[dev]
+        pip install lib/kql lib/kibana
+
+    - name: Export Rules from Kibana
+      run: |
+        python -m detection_rules kibana export-rules
+      env:
+        KIBANA_URL: ${{ env.ELASTIC_KIBANA_URL }}
+        KIBANA_USERNAME: ${{ env.ELASTIC_USERNAME }}
+        KIBANA_PASSWORD: ${{ env.ELASTIC_PASSWORD }}
+
+    - name: Import Rules to Local Repo
+      run: |
+        python -m detection_rules import-rules-to-repo --directory ${{ env.CUSTOM_RULES_DIR }}
+
+    - name: Update Version Lock
+      run: |
+        python -m detection_rules dev build-release --update-version-lock
+
+    - name: Check for Existing Sync PR
+      id: check-pr
+      uses: actions/github-script@v5
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const { data: pullRequests } = await github.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            head: 'sync-rules',
+          });
+          if (pullRequests.length) {
+            return pullRequests[0].number;
+          }
+          return '';
+
+    - name: Create or Update Pull Request
+      if: steps.check-pr.outputs.result == ''
+      uses: peter-evans/create-pull-request@v3
+      with:
+        commit-message: "Scheduled rules sync from Elastic Security"
+        title: "Scheduled Rules Sync from Elastic Security"
+        body: "This PR syncs rules from Elastic Security to the repository."
+        branch: "sync-rules"
+        delete-branch: false
+        signoff: true
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Commit to Existing PR Branch
+      if: steps.check-pr.outputs.result != ''
+      run: |
+        git checkout sync-rules
+        git commit -am "Update sync rules"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

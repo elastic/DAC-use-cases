@@ -1,0 +1,67 @@
+name: Manual Dispatch Sync Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      sync_rules_from_elastic:
+        description: 'Sync rules from Elastic Security (true/false)'
+        required: true
+        default: 'false'
+
+jobs:
+  manual-dispatch-sync:
+    runs-on: ubuntu-latest
+    env:
+      CUSTOM_RULES_DIR: ${{ secrets.CUSTOM_RULES_DIR }}
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.12'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip cache purge
+        pip install .[dev]
+        pip install lib/kql lib/kibana
+
+    - name: Export and Import Rules if flag is true
+      if: ${{ github.event.inputs.sync_rules_from_elastic == 'true' }}
+      run: |
+        python -m detection_rules kibana export-rules
+        python -m detection_rules import-rules-to-repo --directory ${{ env.CUSTOM_RULES_DIR }}
+      env:
+        KIBANA_URL: ${{ env.ELASTIC_KIBANA_URL }}
+        KIBANA_USERNAME: ${{ env.ELASTIC_USERNAME }}
+        KIBANA_PASSWORD: ${{ env.ELASTIC_PASSWORD }}
+
+    - name: Update Version Lock
+      run: |
+        python -m detection_rules dev build-release --update-version-lock
+
+    - name: Create Pull Request
+      if: ${{ github.event.inputs.sync_rules_from_elastic == 'true' }}
+      uses: peter-evans/create-pull-request@v3
+      with:
+        commit-message: "Sync rules from Elastic Security"
+        title: "Sync rules from Elastic Security"
+        body: "This PR syncs rules from Elastic Security to the repository for review."
+        branch: "sync-rules-${{ github.run_id }}"
+        delete-branch: true
+        signoff: true
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Commit Directly to Main
+      if: ${{ github.event.inputs.sync_rules_from_elastic == 'false' }}
+      run: |
+        git config --global user.name 'GitHub Action'
+        git config --global user.email 'action@github.com'
+        git commit -am "Manual dispatch sync"
+        git push origin main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
